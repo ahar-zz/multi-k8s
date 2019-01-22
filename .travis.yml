@@ -1,11 +1,31 @@
 sudo: required
+
 services:
-- docker
-before_install:
-- curl https://sdk.cloud.google.com | bash > /dev/null;
-- source $HOME/google-cloud-sdk/path.bash.inc
-- gcloud components update kubectl
-- gcloud auth activate-service-account --key-file service-account.json
-- 
+  - docker
+
+env:
+  global:
+    - SHA=$(git rev-parse HEAD)
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
 dd:
   secure: Y4DkmFFvDCAe7wPywVhWfm/AZ1CYYBcx27MfZRlY2kaLxgioHfyKth9/QFxdsY8cCVDYTs7/sYErZyBBX8nEQnzKWj0GFDveMe/aP2SHKTMhOWnHx9+RajAB73xrfpoT1sHGu+lz+S8eGD+IBNRlV0N1qVGWd5ANKJJUcPC1Rwx9uiM4UAUbQhEsVwOs1x18KgD6djnk4uiyIsHun5RzvGAiVMUC5f2Y5JWl6xKOkENST2HB6HBySwLvtA9pVFp4bjFcmFZitcyaeRoxaL9SGOilUmOuGSCCgeo/CfIHHoGcON/cgxYbTFqN3auaf4MMswLXbuYlOgmYbyrNUD9qioHa8zkbA0l6HpVPTj9bJYBGvoLZGyDW08GzXIht5DvmcWRekq7uPSEwNYQ/j34YKkARHhf0bRUPxVUZA2osibHpUbLBwwq8pfUxsGie+uz3Kz3pgUZ7cqqHrd2UH7YF+i6JBrjawievmakZY8kPpjGRNCcvcFyFz3K9FiGg8FLo6c4uEZSnR2AVGKkH5wLaLn73egEh0++X/QOP8Bk1sccD+9bqofsIIAjDWUcXz57EXfQi4Zk/rjO2WZBKTAcbyXuqtDAOsAxyc7wv6bkqZYK+zL2SKqficiV9tU7A7JEcOIvuvbF5JgZCZqe5UB7pEqEKw7+WSydFF+IzjISn7Hc=
+
+before_install:
+  - curl https://sdk.cloud.google.com | bash > /dev/null;
+  - source $HOME/google-cloud-sdk/path.bash.inc
+  - gcloud components update kubectl
+  - gcloud auth activate-service-account --key-file service-account.json
+  - gcloud config set project multi-k8s-229402
+  - gcloud config set compute/zone us-east1-b
+  - gcloud container clusters get-credentials multi-cluster
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t renatkabirov/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run renatkabirov/react-test npm run test -- --coverage
+
+deploy:
+  provider: script
+  script: bash ./deploy.sh
+  on:
+    branch: master
